@@ -67,7 +67,7 @@ app.get('/api/animals', (req, res) => {
     res.json(results);
 });
 
-router.get('/', function(req, res) {  
+app.get('/', function(req, res) {  
     res.status(200).send("Hi, It works!")  
   });  
 
