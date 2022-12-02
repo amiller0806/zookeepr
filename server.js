@@ -2,22 +2,21 @@
 // that we can later chain on methods to the Express.js
 //  server. 
 
-const {animals} = require('./data/animals');
 const express = require('express');
+const { animals } = require('./data/animals');
+
 const PORT = process.env.PORT || 3001;
 const app = express();
 
 
 function filterByQuery(query, animalsArray) {
-
-    let personalityTraitsArray = [];
+  let personalityTraitsArray = [];
     // Note that we save the animalsArray as filteredResults here:
-    let filteredResults = animalsArray;
-
-    if (query.personalityTraits) {
-        // Save personalityTraits as a dedicated array.
+  let filteredResults = animalsArray;
+  if (query.personalityTraits) {
+    // Save personalityTraits as a dedicated array.
         // If personalityTraits is a string, place it into the array and save
-        if (typeof(query.personalityTraits) ==='string') {
+if (typeof(query.personalityTraits) ==='string') {
                     personalityTraitsArray = [query.personalityTraits];
                 } else {
                     personalityTraitsArray= query.personalityTraits;
