@@ -67,7 +67,10 @@ app.get('/api/animals', (req, res) => {
     res.json(results);
 });
 
-
+router.get('/', function(req, res, next) {  
+    res.status(200).send("Hi, It works!")  
+  });  
+  
 app.listen(PORT, () => {
     console.log(`API server now on port ${PORT}!`);
 
