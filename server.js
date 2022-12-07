@@ -1,6 +1,10 @@
-//  We assign express() to the app variable so 
-// that we can later chain on methods to the Express.js
-//  server. 
+const fs = require('fs');
+const path = require('path');
+//  This is another module built into the Node.js API that 
+// provides utilities for working with file and directory paths. 
+// It ultimately makes working with our file system a 
+// little more predictable, especially when we work with production 
+// environments such as Heroku.
 
 const express = require('express');
 const { animals } = require('./data/animals');
@@ -8,81 +12,126 @@ const { animals } = require('./data/animals');
 const PORT = process.env.PORT || 3001;
 const app = express();
 
+// parse incoming string or array data
+app.use(express.urlencoded({ extended: true}));
+// parse incoming JSON data
+app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.send('Hello World!');
+});
 
 function filterByQuery(query, animalsArray) {
   let personalityTraitsArray = [];
-    // Note that we save the animalsArray as filteredResults here:
   let filteredResults = animalsArray;
   if (query.personalityTraits) {
-    // Save personalityTraits as a dedicated array.
-        // If personalityTraits is a string, place it into the array and save
-if (typeof(query.personalityTraits) ==='string') {
-                    personalityTraitsArray = [query.personalityTraits];
-                } else {
-                    personalityTraitsArray= query.personalityTraits;
-                }
-                // Loop through each trait in the personalityTraits array:
-                personalityTraitsArray.forEach(trait => {
-                    // Check the trait against each animal in the filteredResults array.
-                    // Remember, it's initially a copy of the animalsArray,
-                    // but here we're updating it for each trait in the.forEach() loop
-                    // For each trait being targeted by the filter, the filteredResults
-                    // array will then contain only the entries that contain the trait,
-                    // so at the end we'll have an array of animals that have every one 
-                    filteredResults = filteredResults.filter(
-                                    animal => animal.personalityTraits.indexOf(trait) !== -1
-                    );                   
-                });
-                    }
-    if(query.diet) {
-        filteredResults = filteredResults.filter(animal => animal.diet === query.diet);
+    if (typeof query.personalityTraits === 'string') {
+      personalityTraitsArray = [query.personalityTraits];
+    } else {
+      personalityTraitsArray = query.personalityTraits;
     }
-    if(query.species) {
-        filteredResults = filteredResults.filter(animal => animal.species === query.species);
-    }
-    if (query.name) {
-        filteredResults = filteredResults.filter(animal => animal.name === query.name);
-    }
-    // return the filtered results:
-    return filteredResults;
+    personalityTraitsArray.forEach(trait => {
+      filteredResults = filteredResults.filter(
+        animal => animal.personalityTraits.indexOf(trait) !== -1
+      );
+    });
+  }
+  if (query.diet) {
+    filteredResults = filteredResults.filter(animal => animal.diet === query.diet);
+  }
+  if (query.species) {
+    filteredResults = filteredResults.filter(animal => animal.species === query.species);
+  }
+  if (query.name) {
+    filteredResults = filteredResults.filter(animal => animal.name === query.name);
+  }
+  return filteredResults;
 }
 
+function findById(id, animalsArray) {
+  const result = animalsArray.filter(animal => animal.id === id)[0];
+  return result;
+}
 
+function createNewAnimal(body, animalsArray) {
+  //  function that accepts the POST route's req.body value
+  //  and the array we want to add the data to
+const animal = body;
+animalsArray.push(animal);
+// Here, we're using the fs.writeFileSync() method, 
+// which is the synchronous version of fs.writeFile() 
+// and doesn't require a callback function.
+fs.writeFileSync(
+  path.join(__dirname, 'animals.json'),
+  JSON.stringify(animalsArray, null, 2)
+);
+  // our function's main code will be here
+  
+  // return finished code to post route for response
+  return animal;
+}
 
-// get() method requires two arguments. 
-// 1st: string that describes the route the client will have
-//  to fetch from
-// 2nd: callback function that will execute every time that route is
-//  accessed with a GET request.
+function validateAnimal(animal) {
 
+  if (!animal.name || typeof animal.name !== 'string') {
+    return false;
+  }
+
+  if (!animal.species || typeof animal.species !=='string') {
+    return false;
+}
+
+if (!animal.diet || typeof animal.diet !=='string') {
+  return false;
+}
+
+if (!animal.personalityTraits || typeof animal.personalityTraits !=='string') {
+  return false;
+}
+return true;
+}
 app.get('/api/animals', (req, res) => {
-    let results = animals;
-    if (req.query) {
-        results = filterByQuery(req.query, results);
-    }
-
-    // using the send() method from the res parameter (short for response) 
-    // to send the string Hello! to our client.
-    res.json(results);
+  let results = animals;
+  if (req.query) {
+    results = filterByQuery(req.query, results);
+  }
+  res.json(results);
 });
 
-app.get('/', function(req, res) {  
-    res.status(200).send("Hi, It works!")  
-  });  
+app.get('/api/animals/:id', (req, res) => {
+  const result = findById(req.params.id, animals);
+  if (result) {
+    res.json(result);
+  } else {
+    res.send(404);
+  }
+});
+
+
+// Now when we receive new post data to be added to the animals.json
+//  file, we'll tak Remember, the length property is always going to be one number ahead of the last index of the array so we can avoid any duplicate values.e the length property of the animals array 
+// (because it's a one-to-one representation of our animals.json 
+// file data) and set that as the id for the new data
+app.post('/api/animals', (req, res) => {
+    // set id based on what the next index of the array will b
+    req.body.id = animals.length.toString();
+
+
+    // if any data in req.body is incorrect, send 400 error back 
+    if(!validateAnimal(req.body)) { 
+      // response method to relay a message to the client making the request.
+      // We send them an HTTP status code and a message explaining 
+      // what went wrong. Anything in the 400 range means that it's a 
+      // user error and not a server error, and the message can help the 
+      // user understand what went wrong on their end.
+      res.status(400).send('The animal is not properly formatted.');
+    } else {
+          // add animal to json file and animals array 
+const animal = createNewAnimal(req.body, animals);
+res.json(animal);
+    }
+});
 
 app.listen(PORT, () => {
-    console.log(`API server now on port ${PORT}!`);
-
+  console.log(`API server now on port ${PORT}!`);
 });
-// PORT: Likewise, if you have the address for a 
-// college campus, you don't know exactly which 
-// building or classroom to go to. 
-// The port is like a building/classroom; 
-// it gives the exact destination on the host.
-// HOST: Address of website, The host tells the client where to go, but it doesn't specify exactly where to go. 
-
-// We're revising the filteredResults array for each trait we loop with .forEach()
-// Each iteration revises filteredResults so that it only has animals that have the indicated trait
-// At the end of the .forEach() loop, we'll have a filteredResults array that only has animals that have all of the 
-// traits we're targeting
